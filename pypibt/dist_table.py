@@ -10,11 +10,11 @@ from .mapf_utils import Coord, Grid, get_neighbors, is_valid_coord
 class DistTable:
     grid: Grid
     goal: Coord
-    Q: deque = field(init=False)  # lazy distance evaluation
+    queue: deque[Coord] = field(init=False)  # lazy distance evaluation
     table: np.ndarray = field(init=False)  # distance matrix
 
     def __post_init__(self):
-        self.Q = deque([self.goal])
+        self.queue = deque([self.goal])
         self.table = np.full(self.grid.shape, self.grid.size, dtype=int)
         self.table[self.goal] = 0
 
@@ -28,13 +28,13 @@ class DistTable:
             return self.table[target]
 
         # BFS with lazy evaluation
-        while len(self.Q) > 0:
-            u = self.Q.popleft()
+        while len(self.queue) > 0:
+            u = self.queue.popleft()
             d = int(self.table[u])
             for v in get_neighbors(self.grid, u):
                 if d + 1 < self.table[v]:
                     self.table[v] = d + 1
-                    self.Q.append(v)
+                    self.queue.append(v)
             if u == target:
                 return d
 

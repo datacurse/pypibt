@@ -47,7 +47,8 @@ def get_grid(map_file: str) -> Grid:
 
 def get_scenario(scen_file: str, N: int | None = None) -> tuple[Config, Config]:
     with open(scen_file, "r") as f:
-        starts, goals = [], []
+        starts: list[Coord] = []
+        goals: list[Coord] = []
         for row in f:
             res = re.match(
                 r"\d+\t.+\.map\t\d+\t\d+\t(\d+)\t(\d+)\t(\d+)\t(\d+)\t.+", row

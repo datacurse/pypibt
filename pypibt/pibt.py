@@ -27,17 +27,17 @@ class PIBT:
         # true -> valid, false -> invalid
 
         # get candidate next vertices
-        C = [Q_from[i]] + get_neighbors(self.grid, Q_from[i])
-        self.rng.shuffle(C)  # tie-breaking, randomize
-        C = sorted(C, key=lambda u: self.dist_tables[i].get(u))
+        candidates = [Q_from[i]] + get_neighbors(self.grid, Q_from[i])
+        self.rng.shuffle(candidates)  # tie-breaking, randomize
+        candidates = sorted(candidates, key=lambda u: self.dist_tables[i].get(u))
 
         # vertex assignment
-        for v in C:
+        for v in candidates:
             # avoid vertex collision
             if self.occupied_nxt[v] != self.NIL:
                 continue
 
-            j = self.occupied_now[v]
+            j = int(self.occupied_now[v])
 
             # avoid edge collision
             if j != self.NIL and Q_to[j] == Q_from[i]:
