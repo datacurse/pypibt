@@ -9,7 +9,6 @@ packages = [{include = "pypibt"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 numpy = "^1.25.1"
-jupyterlab = ">=3.0.0,<4.0.0a0"
 matplotlib = "^3.7.2"
 
 
