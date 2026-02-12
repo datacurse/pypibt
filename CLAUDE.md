@@ -14,8 +14,8 @@ Reference: Okumura, K., Machida, M., Défago, X., & Tamura, Y. "Priority inherit
 # Install dependencies (Poetry-based project, but pyproject.toml was removed)
 pip install -r requirements.txt
 
-# Run the demo
-python app.py -m assets/random-32-32-10.map -i assets/random-32-32-10-random-1.scen -N 200
+# Run the demo (grid params and scenario are hardcoded in app.py)
+python app.py
 
 # Formatting (enforced via pre-commit hooks)
 black .
@@ -37,7 +37,7 @@ All source code lives in the `pypibt/` package (3 modules) with `app.py` as the 
 
 - **`pibt.py`** — `PIBT` class: the solver. `run()` drives the main loop, `step()` computes one timestep, `funcPIBT()` is the recursive core with priority inheritance and backtracking. Uses `occupied_now`/`occupied_nxt` numpy arrays for O(1) collision checking. `NIL` sentinel = `N` (agent count), `NIL_COORD` sentinel = `grid.shape`.
 - **`dist_table.py`** — `DistTable` dataclass: lazy BFS distance computation from each agent's goal. Distances are computed on-demand and cached in a numpy array. Unreachable/unknown cells default to `grid.size`.
-- **`mapf_utils.py`** — I/O and validation: parses `.map`/`.scen` benchmark files (from movingai.com format), validates solutions (vertex/edge collisions, connectivity), saves output for the external `mapf-visualizer` tool.
+- **`mapf_utils.py`** — Grid construction, I/O, and validation: `get_grid(height, width, obstacles)` builds the grid from dimensions and obstacle coordinates, parses `.scen` benchmark files, validates solutions (vertex/edge collisions, connectivity), saves output for the external `mapf-visualizer` tool.
 
 ### Type aliases (defined in `mapf_utils.py`)
 
@@ -51,4 +51,4 @@ All source code lives in the `pypibt/` package (3 modules) with `app.py` as the 
 
 - Only runtime dependency is `numpy`. Dev tools: `black`, `isort`, `pre-commit`.
 - isort uses `--profile black` for compatibility.
-- Benchmark assets in `assets/` use the standard MAPF benchmark format.
+- Scenario assets in `assets/` use the standard MAPF benchmark `.scen` format.

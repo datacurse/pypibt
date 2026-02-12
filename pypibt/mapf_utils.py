@@ -11,37 +11,12 @@ Config: TypeAlias = list[Coord]
 Configs: TypeAlias = list[Config]
 
 
-def get_grid(map_file: str) -> Grid:
-    width, height = 0, 0
-    with open(map_file, "r") as f:
-        # retrieve map size
-        for row in f:
-            # get width
-            res = re.match(r"width\s(\d+)", row)
-            if res:
-                width = int(res.group(1))
-
-            # get height
-            res = re.match(r"height\s(\d+)", row)
-            if res:
-                height = int(res.group(1))
-
-            if width > 0 and height > 0:
-                break
-
-        # retrieve map
-        grid = np.zeros((height, width), dtype=bool)
-        y = 0
-        for row in f:
-            row = row.strip()
-            if len(row) == width and row != "map":
-                grid[y] = [s == "." for s in row]
-                y += 1
-
-    # simple error check
-    assert y == height, f"map format seems strange, check {map_file}"
-
+def get_grid(height: int, width: int, obstacles: list[Coord] | None = None) -> Grid:
     # grid[y, x] -> True: available, False: obstacle
+    grid = np.ones((height, width), dtype=bool)
+    if obstacles:
+        for y, x in obstacles:
+            grid[y, x] = False
     return grid
 
 
