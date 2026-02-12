@@ -22,6 +22,7 @@ COLOR_BUTTON_ACTIVE = (50, 130, 200)
 COLOR_BUTTON_HOVER = (90, 90, 90)
 COLOR_BUTTON_TEXT = (220, 220, 220)
 COLOR_BUTTON_BORDER = (100, 100, 100)
+COLOR_GOAL_LINE = (200, 80, 80)
 
 
 def run_visualizer(
@@ -36,7 +37,7 @@ def run_visualizer(
     h, w = sim.grid.shape
     ppm = pixels_per_meter
     cell_px = cell_size_m * ppm
-    status_height = 60
+    status_height = 82
     win_w = int(w * cell_px)
     win_h = int(h * cell_px) + status_height
 
@@ -87,9 +88,18 @@ def run_visualizer(
     for _mult in SPEED_MULTIPLIERS:
         _label_surf = status_font.render(f"x{_mult}", True, COLOR_BUTTON_TEXT)
         _btn_w = _label_surf.get_width() + 16
-        _btn_rect = pygame.Rect(_btn_x, grid_h_px + 30, _btn_w, 22)
+        _btn_rect = pygame.Rect(_btn_x, grid_h_px + 50, _btn_w, 22)
         speed_buttons.append((_btn_rect, _mult, _label_surf))
         _btn_x += _btn_w + 4
+
+    # checkbox: show goal lines
+    show_goals = False
+    cb_label_surf = status_font.render("Goals", True, COLOR_BUTTON_TEXT)
+    cb_size = 14
+    cb_x = _btn_x + 12
+    cb_y = grid_h_px + 54
+    checkbox_rect = pygame.Rect(cb_x, cb_y, cb_size, cb_size)
+    cb_label_x = cb_x + cb_size + 5
 
     running = True
     elapsed = 0.0  # seconds since last logical step
@@ -101,12 +111,15 @@ def run_visualizer(
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                for btn_rect, mult, _ in speed_buttons:
-                    if btn_rect.collidepoint(event.pos):
-                        current_speed_mult = mult
-                        step_interval = cell_size_m / (speed * current_speed_mult)
-                        physics.speed = speed * current_speed_mult
-                        break
+                if checkbox_rect.collidepoint(event.pos):
+                    show_goals = not show_goals
+                else:
+                    for btn_rect, mult, _ in speed_buttons:
+                        if btn_rect.collidepoint(event.pos):
+                            current_speed_mult = mult
+                            step_interval = cell_size_m / (speed * current_speed_mult)
+                            physics.speed = speed * current_speed_mult
+                            break
 
         dt = clock.tick(100) / 1000.0  # seconds this frame
 
@@ -164,11 +177,27 @@ def run_visualizer(
             label_rect = label.get_rect(center=(int(px_x), int(px_y)))
             screen.blit(label, label_rect)
 
+        # goal lines
+        if show_goals:
+            for agent in sim.agents:
+                goal = sim.pibt.goals[agent.agent_id]
+                ym, xm = physics.positions[agent.agent_id]
+                ax = int(xm * ppm)
+                ay = int(ym * ppm)
+                gx = int(goal[1] * cell_px + cell_px / 2)
+                gy = int(goal[0] * cell_px + cell_px / 2)
+                if ax != gx or ay != gy:
+                    pygame.draw.line(screen, COLOR_GOAL_LINE, (ax, ay), (gx, gy), 2)
+
         # status bar
         status_rect = pygame.Rect(0, grid_h_px, win_w, status_height)
         pygame.draw.rect(screen, COLOR_STATUS_BG, status_rect)
+        t = sim.timestep
+        hrs, rem = divmod(t, 3600)
+        mins, secs = divmod(rem, 60)
+        time_str = f"{hrs}:{mins:02d}:{secs:02d}"
         status_text = (
-            f"t={sim.timestep}  |  "
+            f"{time_str}  |  "
             f"Delivered: {len(sim.completed_tasks)}  |  "
             f"Pending: {len(sim.pending_tasks)}  |  "
             f"Active: {len(sim.active_tasks)}"
@@ -176,8 +205,22 @@ def run_visualizer(
         text_surface = status_font.render(status_text, True, COLOR_STATUS_TEXT)
         screen.blit(text_surface, (10, grid_h_px + 8))
 
-        # speed buttons (row 2)
-        screen.blit(speed_label_surf, (10, grid_h_px + 34))
+        # row 2: throughput and agent utilization
+        if sim.timestep > 0:
+            del_per_hour = len(sim.completed_tasks) / sim.timestep * 3600
+        else:
+            del_per_hour = 0.0
+        num_active = sum(1 for a in sim.agents if a.state != AgentState.IDLE)
+        active_pct = num_active / len(sim.agents) * 100 if sim.agents else 0.0
+        stats2_text = (
+            f"Throughput: {del_per_hour:.1f} del/hr  |  "
+            f"Busy: {num_active}/{len(sim.agents)} ({active_pct:.0f}%)"
+        )
+        stats2_surface = status_font.render(stats2_text, True, COLOR_STATUS_TEXT)
+        screen.blit(stats2_surface, (10, grid_h_px + 26))
+
+        # speed buttons (row 3)
+        screen.blit(speed_label_surf, (10, grid_h_px + 54))
         mouse_pos = pygame.mouse.get_pos()
         for btn_rect, mult, label_surf in speed_buttons:
             if mult == current_speed_mult:
@@ -189,6 +232,14 @@ def run_visualizer(
             pygame.draw.rect(screen, bg, btn_rect, border_radius=3)
             pygame.draw.rect(screen, COLOR_BUTTON_BORDER, btn_rect, 1, border_radius=3)
             screen.blit(label_surf, (btn_rect.x + 8, btn_rect.y + 3))
+
+        # checkbox: show goals
+        if show_goals:
+            pygame.draw.rect(screen, COLOR_BUTTON_ACTIVE, checkbox_rect)
+        else:
+            pygame.draw.rect(screen, COLOR_BUTTON_BG, checkbox_rect)
+        pygame.draw.rect(screen, COLOR_BUTTON_BORDER, checkbox_rect, 1)
+        screen.blit(cb_label_surf, (cb_label_x, cb_y))
 
         pygame.display.flip()
 

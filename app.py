@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     sim = MAPDSimulation(
         grid=grid,
-        num_agents=100,
+        num_agents=50,
         pickup_locations=pickup_locations,
         delivery_locations=delivery_locations,
         task_frequency=2,
