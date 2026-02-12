@@ -17,6 +17,11 @@ COLOR_AGENT_BORDER = (20, 20, 20)
 COLOR_PENDING_TASK = (220, 50, 50)
 COLOR_STATUS_BG = (40, 40, 40)
 COLOR_STATUS_TEXT = (220, 220, 220)
+COLOR_BUTTON_BG = (70, 70, 70)
+COLOR_BUTTON_ACTIVE = (50, 130, 200)
+COLOR_BUTTON_HOVER = (90, 90, 90)
+COLOR_BUTTON_TEXT = (220, 220, 220)
+COLOR_BUTTON_BORDER = (100, 100, 100)
 
 
 def run_visualizer(
@@ -31,7 +36,7 @@ def run_visualizer(
     h, w = sim.grid.shape
     ppm = pixels_per_meter
     cell_px = cell_size_m * ppm
-    status_height = 36
+    status_height = 60
     win_w = int(w * cell_px)
     win_h = int(h * cell_px) + status_height
 
@@ -41,6 +46,11 @@ def run_visualizer(
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("consolas", max(10, int(cell_px // 3)))
     status_font = pygame.font.SysFont("consolas", 16)
+
+    # speed control
+    SPEED_MULTIPLIERS = [1, 2, 5, 10, 100, 1000]
+    MAX_TICKS_PER_FRAME = 50
+    current_speed_mult = 1
 
     # pre-render static grid surface
     grid_h_px = int(h * cell_px)
@@ -70,6 +80,17 @@ def run_visualizer(
         pygame.draw.rect(grid_surface, COLOR_DELIVERY, rect)
         pygame.draw.rect(grid_surface, COLOR_GRID_LINE, rect, 1)
 
+    # pre-compute speed button rects
+    speed_label_surf = status_font.render("Speed:", True, COLOR_STATUS_TEXT)
+    _btn_x = 10 + speed_label_surf.get_width() + 8
+    speed_buttons: list[tuple[pygame.Rect, int, pygame.Surface]] = []
+    for _mult in SPEED_MULTIPLIERS:
+        _label_surf = status_font.render(f"x{_mult}", True, COLOR_BUTTON_TEXT)
+        _btn_w = _label_surf.get_width() + 16
+        _btn_rect = pygame.Rect(_btn_x, grid_h_px + 30, _btn_w, 22)
+        speed_buttons.append((_btn_rect, _mult, _label_surf))
+        _btn_x += _btn_w + 4
+
     running = True
     elapsed = 0.0  # seconds since last logical step
 
@@ -79,6 +100,13 @@ def run_visualizer(
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for btn_rect, mult, _ in speed_buttons:
+                    if btn_rect.collidepoint(event.pos):
+                        current_speed_mult = mult
+                        step_interval = cell_size_m / (speed * current_speed_mult)
+                        physics.speed = speed * current_speed_mult
+                        break
 
         dt = clock.tick(60) / 1000.0  # seconds this frame
 
@@ -86,10 +114,20 @@ def run_visualizer(
         physics.update(dt)
         elapsed += dt
 
-        # trigger logical step when enough time passed and robots settled
-        if elapsed >= step_interval and physics.all_settled():
-            sim.tick()
-            physics.set_targets(sim.current_config)
+        # trigger logical steps -- may need multiple per frame at high speeds
+        ticks_this_frame = 0
+        while elapsed >= step_interval and ticks_this_frame < MAX_TICKS_PER_FRAME:
+            if current_speed_mult >= 100 or physics.all_settled():
+                sim.tick()
+                physics.set_targets(sim.current_config)
+                if current_speed_mult >= 100:
+                    physics.snap_to_targets()
+                elapsed -= step_interval
+                ticks_this_frame += 1
+            else:
+                break
+
+        if ticks_this_frame >= MAX_TICKS_PER_FRAME:
             elapsed = 0.0
 
         # draw grid
@@ -137,6 +175,20 @@ def run_visualizer(
         )
         text_surface = status_font.render(status_text, True, COLOR_STATUS_TEXT)
         screen.blit(text_surface, (10, grid_h_px + 8))
+
+        # speed buttons (row 2)
+        screen.blit(speed_label_surf, (10, grid_h_px + 34))
+        mouse_pos = pygame.mouse.get_pos()
+        for btn_rect, mult, label_surf in speed_buttons:
+            if mult == current_speed_mult:
+                bg = COLOR_BUTTON_ACTIVE
+            elif btn_rect.collidepoint(mouse_pos):
+                bg = COLOR_BUTTON_HOVER
+            else:
+                bg = COLOR_BUTTON_BG
+            pygame.draw.rect(screen, bg, btn_rect, border_radius=3)
+            pygame.draw.rect(screen, COLOR_BUTTON_BORDER, btn_rect, 1, border_radius=3)
+            screen.blit(label_surf, (btn_rect.x + 8, btn_rect.y + 3))
 
         pygame.display.flip()
 

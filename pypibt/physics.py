@@ -28,6 +28,9 @@ class PhysicsLayer:
     def set_targets(self, config: Config) -> None:
         self.targets = [self._cell_to_meters(r, c) for r, c in config]
 
+    def snap_to_targets(self) -> None:
+        self.positions = list(self.targets)
+
     def update(self, dt: float) -> None:
         max_dist = self.speed * dt
         for i, ((py, px), (ty, tx)) in enumerate(
