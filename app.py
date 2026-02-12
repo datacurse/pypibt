@@ -34,4 +34,4 @@ if __name__ == "__main__":
         seed=42,
     )
 
-    run_visualizer(sim, cell_size=32, tick_ms=400)
+    run_visualizer(sim, cell_size_m=1.0, speed=1.0, pixels_per_meter=32.0)
