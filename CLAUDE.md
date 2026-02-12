@@ -37,7 +37,7 @@ All source code lives in the `pypibt/` package (3 modules) with `app.py` as the 
 
 - **`pibt.py`** — `PIBT` class: the solver. `run()` drives the main loop, `step()` computes one timestep, `funcPIBT()` is the recursive core with priority inheritance and backtracking. Uses `occupied_now`/`occupied_nxt` numpy arrays for O(1) collision checking. `NIL` sentinel = `N` (agent count), `NIL_COORD` sentinel = `grid.shape`.
 - **`dist_table.py`** — `DistTable` dataclass: lazy BFS distance computation from each agent's goal. Distances are computed on-demand and cached in a numpy array. Unreachable/unknown cells default to `grid.size`.
-- **`mapf_utils.py`** — Grid construction, I/O, and validation: `get_grid(height, width, obstacles)` builds the grid from dimensions and obstacle coordinates, parses `.scen` benchmark files, validates solutions (vertex/edge collisions, connectivity), saves output for the external `mapf-visualizer` tool.
+- **`mapf_utils.py`** — Grid construction, I/O, and validation: `get_grid(height, width, obstacles)` builds the grid from dimensions and obstacle coordinates, validates solutions (vertex/edge collisions, connectivity), saves output for the external `mapf-visualizer` tool.
 
 ### Type aliases (defined in `mapf_utils.py`)
 
@@ -45,10 +45,10 @@ All source code lives in the `pypibt/` package (3 modules) with `app.py` as the 
 
 ### Data flow
 
-`app.py` → `get_grid()` + `get_scenario()` → `PIBT(grid, starts, goals)` → `pibt.run()` → `is_valid_mapf_solution()` → `save_configs_for_visualizer()`
+`app.py` → `get_grid()` → `PIBT(grid, starts, goals)` → `pibt.run()` → `is_valid_mapf_solution()` → `save_configs_for_visualizer()`
 
 ## Key conventions
 
 - Only runtime dependency is `numpy`. Dev tools: `black`, `isort`, `pre-commit`.
 - isort uses `--profile black` for compatibility.
-- Scenario assets in `assets/` use the standard MAPF benchmark `.scen` format.
+- Grid, starts, and goals are all hardcoded in `app.py` as lists of `(y, x)` tuples — no external config files.

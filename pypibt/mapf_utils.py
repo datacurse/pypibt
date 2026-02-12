@@ -1,5 +1,4 @@
 import os
-import re
 from typing import TypeAlias
 
 import numpy as np
@@ -19,25 +18,6 @@ def get_grid(height: int, width: int, obstacles: list[Coord] | None = None) -> G
             grid[y, x] = False
     return grid
 
-
-def get_scenario(scen_file: str, N: int | None = None) -> tuple[Config, Config]:
-    with open(scen_file, "r") as f:
-        starts: list[Coord] = []
-        goals: list[Coord] = []
-        for row in f:
-            res = re.match(
-                r"\d+\t.+\.map\t\d+\t\d+\t(\d+)\t(\d+)\t(\d+)\t(\d+)\t.+", row
-            )
-            if res:
-                x_s, y_s, x_g, y_g = [int(res.group(k)) for k in range(1, 5)]
-                starts.append((y_s, x_s))  # align with grid
-                goals.append((y_g, x_g))
-
-                # check the number of agents
-                if (N is not None) and len(starts) >= N:
-                    break
-
-    return starts, goals
 
 
 def is_valid_coord(grid: Grid, coord: Coord) -> bool:
