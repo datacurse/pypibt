@@ -1,9 +1,9 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
 
 import numpy as np
 
-from .mapf_utils import Config, Coord, Grid, get_grid
+from .mapf_utils import Config, Coord, Grid
 from .pibt import PIBT
 
 

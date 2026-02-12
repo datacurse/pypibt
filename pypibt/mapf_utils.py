@@ -29,7 +29,8 @@ def expand_areas(areas: list[Coord | tuple[Coord, Coord]]) -> list[Coord]:
     result: list[Coord] = []
     for item in areas:
         if isinstance(item[0], tuple):
-            (y1, x1), (y2, x2) = item  # type: ignore[misc]
+            corners: tuple[Coord, Coord] = item  # type: ignore[assignment]
+            (y1, x1), (y2, x2) = corners
             for y in range(y1, y2 + 1):
                 for x in range(x1, x2 + 1):
                     result.append((y, x))
