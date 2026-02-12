@@ -108,7 +108,7 @@ def run_visualizer(
                         physics.speed = speed * current_speed_mult
                         break
 
-        dt = clock.tick(60) / 1000.0  # seconds this frame
+        dt = clock.tick(100) / 1000.0  # seconds this frame
 
         # advance physics
         physics.update(dt)
