@@ -17,19 +17,19 @@ if __name__ == "__main__":
 
     # delivery stations: shelf blocks (2 rows x 3 cols), spaced by aisles
     delivery_locations = expand_areas([
-        ((2, 3), (2, 15)),
-        ((5, 3), (5, 15)),
-        ((8, 3), (8, 15)),
-        ((11, 3), (11, 15)),
-        ((14, 3), (14, 15)),
-        ((17, 3), (17, 15)),
+        ((2, 3), (3, 15)),
+        ((5, 3), (6, 15)),
+        ((8, 3), (9, 15)),
+        ((11, 3), (12, 15)),
+        ((14, 3), (15, 15)),
+        ((17, 3), (18, 15)),
     ])
 
     grid = get_grid(height, width, obstacles=[])
 
     sim = MAPDSimulation(
         grid=grid,
-        num_agents=50,
+        num_agents=80,
         pickup_locations=pickup_locations,
         delivery_locations=delivery_locations,
         task_frequency=2,
