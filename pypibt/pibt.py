@@ -62,6 +62,10 @@ class PIBT:
         self.occupied_nxt[Q_from[i]] = i
         return False
 
+    def update_goal(self, agent_id: int, new_goal: Coord) -> None:
+        self.goals[agent_id] = new_goal
+        self.dist_tables[agent_id] = DistTable(self.grid, new_goal)
+
     def step(self, Q_from: Config, priorities: list[float]) -> Config:
         # setup
         N = len(Q_from)
