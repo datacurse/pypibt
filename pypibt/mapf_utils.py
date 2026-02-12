@@ -18,6 +18,26 @@ def get_grid(height: int, width: int, obstacles: list[Coord] | None = None) -> G
     return grid
 
 
+def expand_areas(areas: list[Coord | tuple[Coord, Coord]]) -> list[Coord]:
+    """Expand a mix of single coordinates and rectangular areas into a flat coordinate list.
+
+    Each element is either:
+    - A single Coord: (y, x) -- passed through as-is
+    - A rectangular area: ((y1, x1), (y2, x2)) -- expanded to all cells in the
+      rectangle (inclusive on both corners)
+    """
+    result: list[Coord] = []
+    for item in areas:
+        if isinstance(item[0], tuple):
+            (y1, x1), (y2, x2) = item  # type: ignore[misc]
+            for y in range(y1, y2 + 1):
+                for x in range(x1, x2 + 1):
+                    result.append((y, x))
+        else:
+            result.append(item)  # type: ignore[arg-type]
+    return result
+
+
 def is_valid_coord(grid: Grid, coord: Coord) -> bool:
     y, x = coord
     if y < 0 or y >= grid.shape[0] or x < 0 or x >= grid.shape[1] or not grid[coord]:
