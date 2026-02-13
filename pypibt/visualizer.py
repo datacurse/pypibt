@@ -1,6 +1,7 @@
 import math
 
 import pygame
+import pygame.gfxdraw
 
 from .physics import PhysicsLayer
 from .simulation import AgentState, MAPDSimulation
@@ -15,8 +16,8 @@ _STATE_NAMES_RU = {
 COLOR_BG = (30, 30, 46)  # Base
 COLOR_WALKABLE = (69, 71, 90)  # Surface 1
 COLOR_OBSTACLE = (24, 24, 37)  # Mantle
-COLOR_PICKUP = (166, 227, 161)  # Green
-COLOR_DELIVERY = (137, 180, 250)  # Blue
+COLOR_PICKUP = (98, 129, 104)  # Green (dimmed)
+COLOR_DELIVERY = (84, 105, 148)  # Blue (dimmed)
 COLOR_GRID_LINE = (49, 50, 68)  # Surface 0
 COLOR_AGENT_IDLE = (166, 173, 200)  # Subtext 0
 COLOR_AGENT_TO_PICKUP = (166, 227, 161)  # Green (matches Pickup stations)
@@ -232,10 +233,9 @@ def run_visualizer(
             else:
                 color = COLOR_AGENT_CARRYING
 
-            pygame.draw.circle(screen, color, (int(px_x), int(px_y)), radius)
-            pygame.draw.circle(
-                screen, COLOR_AGENT_BORDER, (int(px_x), int(px_y)), radius, 2
-            )
+            ix, iy = int(px_x), int(px_y)
+            pygame.gfxdraw.filled_circle(screen, ix, iy, radius, color)
+            pygame.gfxdraw.aacircle(screen, ix, iy, radius, color)
 
         # legend
         screen.blit(legend_surface, (win_w - _leg_w - 8, 8))
