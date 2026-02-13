@@ -39,7 +39,12 @@ def run_visualizer(
     speed: float = 1.0,
     pixels_per_meter: float = 32.0,
 ):
-    physics = PhysicsLayer(sim.current_config, cell_size_m, speed)
+    physics = PhysicsLayer(
+        sim.current_config,
+        cell_size_m,
+        speed,
+        initial_orientations=sim.pibt.orientations,
+    )
     step_interval = cell_size_m / speed  # seconds between logical steps
 
     h, w = sim.grid.shape
@@ -51,7 +56,7 @@ def run_visualizer(
 
     pygame.init()
     screen = pygame.display.set_mode((win_w, win_h))
-    pygame.display.set_caption("MAPD Симуляция (PIBT)")
+    pygame.display.set_caption("MAPD Симуляция (EPIBT)")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("consolas", max(10, int(cell_px // 3)))
     status_font = pygame.font.SysFont("consolas", 16)
@@ -153,7 +158,12 @@ def run_visualizer(
             pygame.draw.polygon(
                 legend_surface,
                 _color,
-                [(_cx, _cy - _ds), (_cx + _ds, _cy), (_cx, _cy + _ds), (_cx - _ds, _cy)],
+                [
+                    (_cx, _cy - _ds),
+                    (_cx + _ds, _cy),
+                    (_cx, _cy + _ds),
+                    (_cx - _ds, _cy),
+                ],
             )
         _txt = legend_font.render(_label, True, COLOR_STATUS_TEXT)
         legend_surface.blit(_txt, (_sx + _leg_swatch + 6, _ey + 1))
@@ -189,7 +199,7 @@ def run_visualizer(
         while elapsed >= step_interval and ticks_this_frame < MAX_TICKS_PER_FRAME:
             if current_speed_mult >= 100 or physics.all_settled():
                 sim.tick()
-                physics.set_targets(sim.current_config)
+                physics.set_targets(sim.current_config, sim.pibt.orientations)
                 if current_speed_mult >= 100:
                     physics.snap_to_targets()
                 elapsed -= step_interval
@@ -237,6 +247,27 @@ def run_visualizer(
             pygame.gfxdraw.filled_circle(screen, ix, iy, radius, color)
             pygame.gfxdraw.aacircle(screen, ix, iy, radius, color)
 
+            # direction arrow (triangle pointing in facing direction)
+            angle = physics.angles[agent.agent_id]
+            arrow_len = radius * 0.75
+            arrow_hw = radius * 0.35
+            tip_x = ix + math.cos(angle) * arrow_len
+            tip_y = iy + math.sin(angle) * arrow_len
+            perp = angle + math.pi / 2
+            b1x = ix + math.cos(perp) * arrow_hw
+            b1y = iy + math.sin(perp) * arrow_hw
+            b2x = ix - math.cos(perp) * arrow_hw
+            b2y = iy - math.sin(perp) * arrow_hw
+            pygame.draw.polygon(
+                screen,
+                COLOR_AGENT_BORDER,
+                [
+                    (int(tip_x), int(tip_y)),
+                    (int(b1x), int(b1y)),
+                    (int(b2x), int(b2y)),
+                ],
+            )
+
         # legend
         screen.blit(legend_surface, (win_w - _leg_w - 8, 8))
 
@@ -267,7 +298,8 @@ def run_visualizer(
             ax, ay = int(xm * ppm), int(ym * ppm)
             if math.hypot(mouse_pos[0] - ax, mouse_pos[1] - ay) <= radius:
                 state_ru = _STATE_NAMES_RU.get(agent.state.name, agent.state.name)
-                lines = [f"Агент {agent.agent_id}  ({state_ru})"]
+                ori_name = ["N", "E", "S", "W"][sim.pibt.orientations[agent.agent_id]]
+                lines = [f"Агент {agent.agent_id}  ({state_ru})  [{ori_name}]"]
                 if agent.current_task is not None:
                     t = agent.current_task
                     lines.append(f"Задача #{t.task_id}")

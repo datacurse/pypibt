@@ -8,6 +8,19 @@ Coord: TypeAlias = tuple[int, int]
 Config: TypeAlias = list[Coord]
 Configs: TypeAlias = list[Config]
 
+# Orientation: 0=North, 1=East, 2=South, 3=West
+# rotate CW: (o + 1) % 4, rotate CCW: (o - 1) % 4
+Orientation: TypeAlias = int
+Operation: TypeAlias = tuple[str, ...]  # e.g. ("R", "W", "F")
+
+# Direction vectors (dy, dx) for each orientation, matching (y, x) coords
+DIRECTION_VECTORS: list[Coord] = [
+    (-1, 0),  # 0: North (up)
+    (0, 1),  # 1: East (right)
+    (1, 0),  # 2: South (down)
+    (0, -1),  # 3: West (left)
+]
+
 
 def get_grid(height: int, width: int, obstacles: list[Coord] | None = None) -> Grid:
     # grid[y, x] -> True: available, False: obstacle

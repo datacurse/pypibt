@@ -16,14 +16,16 @@ if __name__ == "__main__":
     pickup_locations = [(1, 0), (5, 0), (9, 0), (13, 0), (17, 0)]
 
     # delivery stations: shelf blocks (2 rows x 3 cols), spaced by aisles
-    delivery_locations = expand_areas([
-        ((2, 3), (3, 15)),
-        ((5, 3), (6, 15)),
-        ((8, 3), (9, 15)),
-        ((11, 3), (12, 15)),
-        ((14, 3), (15, 15)),
-        ((17, 3), (18, 15)),
-    ])
+    delivery_locations = expand_areas(
+        [
+            ((2, 3), (3, 15)),
+            ((5, 3), (6, 15)),
+            ((8, 3), (9, 15)),
+            ((11, 3), (12, 15)),
+            ((14, 3), (15, 15)),
+            ((17, 3), (18, 15)),
+        ]
+    )
 
     grid = get_grid(height, width, obstacles=[])
 
