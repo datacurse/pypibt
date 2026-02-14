@@ -4,6 +4,12 @@ from .mapf_utils import Config
 
 
 class PhysicsLayer:
+    """Smooth interpolation layer for rendering grid-based MAPF moves.
+
+    Converts discrete grid positions and orientations into continuous
+    metric coordinates and angles, interpolating smoothly over time.
+    """
+
     def __init__(
         self,
         initial_config: Config,
@@ -14,14 +20,12 @@ class PhysicsLayer:
         self.cell_size_m = cell_size_m
         self.speed = speed
 
-        # convert grid coords to metric centers
         self.positions: list[tuple[float, float]] = [
             self._cell_to_meters(r, c) for r, c in initial_config
         ]
         self.targets: list[tuple[float, float]] = list(self.positions)
 
-        # orientation angles in radians (screen coords: 0=East/right, pi/2=South/down)
-        # N=-pi/2, E=0, S=pi/2, W=pi
+        # Orientation angles in radians (screen coords: 0=East, pi/2=South)
         n = len(initial_config)
         if initial_orientations is not None:
             self.angles: list[float] = [
@@ -65,8 +69,7 @@ class PhysicsLayer:
                 ratio = max_dist / dist
                 self.positions[i] = (py + dy * ratio, px + dx * ratio)
 
-        # angle interpolation (shortest arc)
-        max_rot = self.speed * math.pi * 2 * dt  # ~full turn per cell travel
+        max_rot = self.speed * math.pi * 2 * dt
         for i, (ca, ta) in enumerate(zip(self.angles, self.target_angles)):
             diff = (ta - ca + math.pi) % (2 * math.pi) - math.pi
             if abs(diff) <= max_rot:

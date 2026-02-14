@@ -3,6 +3,7 @@ from enum import Enum, auto
 
 import numpy as np
 
+from .dist_table import DistTable, _UNREACHED
 from .mapf_utils import Config, Coord, Grid
 from .pibt import PIBT
 
@@ -32,6 +33,14 @@ class AgentInfo:
 
 
 class MAPDSimulation:
+    """Multi-Agent Pickup and Delivery simulation using EPIBT.
+
+    Agents are assigned pickup-delivery tasks dynamically. Tasks arrive
+    according to a Poisson process. Idle agents are greedily matched to
+    pending tasks using actual BFS distances (via DistTable) rather than
+    Manhattan distance, which accounts for obstacles.
+    """
+
     def __init__(
         self,
         grid: Grid,
@@ -47,36 +56,44 @@ class MAPDSimulation:
         self.delivery_locations = delivery_locations
         self.task_frequency = task_frequency
 
-        # place agents at random walkable positions (not on stations)
+        # Place agents at random walkable positions (not on stations)
         walkable = [(int(y), int(x)) for y, x in zip(*np.where(grid))]
         reserved = set(pickup_locations + delivery_locations)
         available = [c for c in walkable if c not in reserved]
         start_indices = self.rng.choice(len(available), size=num_agents, replace=False)
         starts: Config = [available[int(i)] for i in start_indices]
 
-        # initial goals = current positions (all idle)
+        # Initial goals = current positions (all idle)
         goals: Config = list(starts)
 
-        # init PIBT solver
+        # Init PIBT solver
         self.pibt = PIBT(grid, starts, goals, seed=seed)
 
-        # agent info
+        # Agent info
         self.agents = [AgentInfo(i) for i in range(num_agents)]
 
-        # priorities
+        # Priorities
         self.priorities: list[float] = [0.0] * num_agents
 
-        # task tracking
+        # Task tracking
         self.task_counter = 0
         self.pending_tasks: list[Task] = []
         self.active_tasks: list[Task] = []
         self.completed_tasks: list[Task] = []
 
-        # state
+        # Pre-compute dist tables for pickup locations (for task assignment)
+        # Maps pickup coord → DistTable (so BFS from that pickup is reusable)
+        self._pickup_dist_tables: dict[Coord, DistTable] = {}
+        for loc in pickup_locations:
+            if loc not in self._pickup_dist_tables:
+                self._pickup_dist_tables[loc] = DistTable(grid, loc)
+
+        # State
         self.current_config: Config = list(starts)
         self.timestep: int = 0
 
     def _generate_tasks(self) -> None:
+        """Generate new tasks according to Poisson arrival process."""
         num_new = int(self.rng.poisson(self.task_frequency))
         for _ in range(num_new):
             pickup = self.pickup_locations[
@@ -95,6 +112,7 @@ class MAPDSimulation:
             self.pending_tasks.append(task)
 
     def _check_arrivals(self) -> None:
+        """Check if any agents have reached their current goal (pickup or delivery)."""
         for agent in self.agents:
             if agent.current_task is None:
                 continue
@@ -102,34 +120,47 @@ class MAPDSimulation:
             task = agent.current_task
 
             if agent.state == AgentState.MOVING_TO_PICKUP and pos == task.pickup:
-                # picked up — change goal to delivery
+                # Picked up → change goal to delivery
                 task.picked_up_at = self.timestep
                 agent.state = AgentState.MOVING_TO_DELIVERY
                 self.pibt.update_goal(agent.agent_id, task.delivery)
 
             elif agent.state == AgentState.MOVING_TO_DELIVERY and pos == task.delivery:
-                # delivered — agent becomes idle
+                # Delivered → agent becomes idle
                 task.delivered_at = self.timestep
                 self.active_tasks.remove(task)
                 self.completed_tasks.append(task)
                 agent.state = AgentState.IDLE
                 agent.current_task = None
+                # Goal = current position (stay put until next assignment)
                 self.pibt.update_goal(agent.agent_id, pos)
 
     def _assign_tasks(self) -> None:
+        """Greedy task assignment using actual BFS distances.
+
+        Uses pre-computed DistTables from pickup locations so that
+        distances account for obstacles in the grid (unlike Manhattan).
+        """
         idle_agents = [a for a in self.agents if a.state == AgentState.IDLE]
         assigned: list[Task] = []
 
         for task in self.pending_tasks:
             if not idle_agents:
                 break
+
+            # Use BFS distance from the task's pickup to each idle agent
+            pickup_dt = self._pickup_dist_tables[task.pickup]
+
             best = min(
                 idle_agents,
-                key=lambda a: (
-                    abs(self.current_config[a.agent_id][0] - task.pickup[0])
-                    + abs(self.current_config[a.agent_id][1] - task.pickup[1])
-                ),
+                key=lambda a: pickup_dt.get(self.current_config[a.agent_id]),
             )
+
+            # Check that the agent can actually reach the pickup
+            dist = pickup_dt.get(self.current_config[best.agent_id])
+            if dist == _UNREACHED:
+                continue  # no reachable idle agent for this task
+
             task.assigned_to = best.agent_id
             best.state = AgentState.MOVING_TO_PICKUP
             best.current_task = task
@@ -142,13 +173,17 @@ class MAPDSimulation:
             self.pending_tasks.remove(task)
 
     def tick(self) -> Config:
+        """Advance the simulation by one timestep.
+
+        Returns the new configuration (positions) of all agents.
+        """
         self.timestep += 1
 
         self._generate_tasks()
         self._check_arrivals()
         self._assign_tasks()
 
-        # update priorities
+        # Update priorities: agents not at goal get increasing priority
         for i in range(len(self.agents)):
             if self.current_config[i] != self.pibt.goals[i]:
                 self.priorities[i] += 1
